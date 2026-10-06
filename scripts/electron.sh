@@ -6,10 +6,15 @@
 # app. Arch names the binary `electron` (meta-package) or `electron<major>`.
 set -euo pipefail
 
-for candidate in electron electron43 electron44 electron42 electron41; do
-  if command -v "$candidate" > /dev/null 2>&1; then
-    exec "$candidate" "$@"
-  fi
+# `pnpm start` puts node_modules/.bin first on PATH, and the npm `electron`
+# wrapper there silently downloads a bundled Electron. Skip anything that
+# resolves inside node_modules so the system runtime always wins.
+for candidate in electron43 electron44 electron42 electron41 electron; do
+  resolved=$(command -v "$candidate" 2> /dev/null) || continue
+  case $resolved in
+    */node_modules/*) continue ;;
+  esac
+  exec "$resolved" "$@"
 done
 
 if [ -x node_modules/.bin/electron ]; then
