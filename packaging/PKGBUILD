@@ -21,9 +21,8 @@ optdepends=(
 )
 makedepends=('pnpm' 'nodejs')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz")
-# Replace with the real checksum once v${pkgver} is tagged:
-#   updpkgsums  (or: makepkg -g >> PKGBUILD)
-sha256sums=('SKIP')
+# After tagging a new version: bump pkgver, then run `updpkgsums`.
+sha256sums=('ac2725e5b497a04a25ded8388707b43a7ad7801f0fc2b8f60cbc99a9e42faded')
 
 build() {
   cd "${srcdir}/${_repo}-${pkgver}"

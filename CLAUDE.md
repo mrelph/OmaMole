@@ -85,4 +85,7 @@ Never test cleanup against the real home: run probes with `HOME=<temp dir>`
 directory is `OmaMole-<ver>`), `packaging/omamole.desktop`
 (`StartupWMClass=omamole` must match the Wayland app id = package.json `name`),
 and a polkit policy scoped to `/usr/lib/omamole/helper/omamole-helper`.
-`sha256sums` is `SKIP` until a tag exists — run `updpkgsums` after tagging.
+Release flow: bump `version` in package.json and `pkgver`, commit, tag
+`v<ver>`, push the tag, then `updpkgsums` in `packaging/` and commit the
+checksum (the tagged tree itself still carries the previous checksum — that
+is expected; makepkg uses the PKGBUILD you run it from).
