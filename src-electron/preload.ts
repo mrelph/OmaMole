@@ -29,7 +29,9 @@ const bridge: OmamoleBridge = {
   trash: (paths) => ipcRenderer.invoke('trash', paths),
   pickFolder: (start) => ipcRenderer.invoke('pick-folder', start),
   settings: () => ipcRenderer.invoke('settings:get'),
-  saveSettings: (settings) => ipcRenderer.invoke('settings:set', settings)
+  saveSettings: (settings) => ipcRenderer.invoke('settings:set', settings),
+  update: (force) => ipcRenderer.invoke('update', force),
+  restart: () => ipcRenderer.invoke('restart')
 }
 
 contextBridge.exposeInMainWorld('omamole', bridge)

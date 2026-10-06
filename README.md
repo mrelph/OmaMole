@@ -50,7 +50,17 @@ cd OmaMole/packaging
 makepkg -si
 ```
 
+If `makepkg -si` can't prompt for sudo (e.g. run from a non-terminal), build with `makepkg -f` and install with `pkexec pacman -U omamole-*.pkg.tar.zst`.
+
 The package depends on the system `electron43`, `pacman-contrib` (for `paccache` / `checkupdates`) and `polkit`, and installs a polkit policy so the password prompt says what it is for.
+
+### Updates
+
+OmaMole is installed from your own build, so `pacman -Syu` / `omarchy update`
+won't upgrade it. Instead it checks GitHub for a newer release tag once a day
+(turn it off in Settings). When one exists, a `vX.Y.Z` button appears in the
+toolbar: press `U` to build and install it in a floating terminal (sudo asks
+for your password there), then `U` again to restart into the new version.
 
 ### From source
 

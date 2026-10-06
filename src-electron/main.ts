@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, net, shell } from 'electron'
 import { existsSync } from 'node:fs'
 import { lstat } from 'node:fs/promises'
 import os from 'node:os'
@@ -16,6 +16,7 @@ import { deletionProblem, expandHome } from './safety'
 import { loadSettings, saveSettings } from './settings'
 import { launchTerminal } from './terminal'
 import { resolveTheme, watchTheme } from './theme'
+import { createUpdater } from './update'
 import type { CleanCategoryId, DiskMode, RemoveResult, ScanReport, TerminalActionId } from './types'
 
 /* The runtime Wayland app_id comes from package.json `name` (omamole). The
@@ -35,17 +36,35 @@ const getClean = cached(60_000, listCategories)
 const getPackages = cached(5 * 60_000, packagesReport)
 const getOmarchy = cached(60_000, omarchyReport)
 
+/* net.fetch goes through Chromium's network stack, so a system or PAC proxy
+   is honoured. */
+const updater = createUpdater({
+  current: app.getVersion(),
+  appRoot: app.getAppPath(),
+  cacheDir: app.getPath('userData'),
+  enabled: async () => (await loadSettings()).updateCheck,
+  fetchJson: async (url, timeoutMs) => {
+    const response = await net.fetch(url, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': `OmaMole/${app.getVersion()}` },
+      signal: AbortSignal.timeout(timeoutMs)
+    })
+    if (!response.ok) throw new Error(`GitHub answered ${response.status}`)
+    return response.json()
+  }
+})
+
 async function scan(force: boolean): Promise<ScanReport> {
   const settled = <T>(promise: Promise<T>) => promise.then((value) => value, () => null)
-  const [disk, memory, failed, clean, packages, omarchy] = await Promise.all([
+  const [disk, memory, failed, clean, packages, omarchy, update] = await Promise.all([
     settled(rootDisk()),
     memorySummary(),
     settled(failedUnits()),
     settled(getClean(force)),
     settled(getPackages(force)),
-    settled(getOmarchy(force))
+    settled(getOmarchy(force)),
+    settled(updater.check(false))
   ])
-  const scored = scoreSystem({ disk, memory, failedUnits: failed?.length ?? 0, clean, packages, omarchy })
+  const scored = scoreSystem({ disk, memory, failedUnits: failed?.length ?? 0, clean, packages, omarchy, update })
   return { ...scored, disk, memory, generatedAt: Date.now() }
 }
 
@@ -106,7 +125,7 @@ function createWindow() {
 
 const isCategory = (value: unknown): value is CleanCategoryId => CATEGORY_ORDER.includes(value as CleanCategoryId)
 const DISK_MODES: DiskMode[] = ['folders', 'files', 'types', 'old']
-const TERMINAL_ACTIONS: TerminalActionId[] = ['system-update', 'orphans', 'pacdiff', 'snapshot', 'btop', 'debug', 'unit-status']
+const TERMINAL_ACTIONS: TerminalActionId[] = ['system-update', 'orphans', 'pacdiff', 'snapshot', 'btop', 'debug', 'unit-status', 'self-update']
 const stringArray = (value: unknown): string[] => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [])
 
 function registerIpc() {
@@ -149,8 +168,16 @@ function registerIpc() {
   ipcMain.handle('system', () => systemReport())
   ipcMain.handle('omarchy', (_event, force: unknown) => getOmarchy(force === true))
 
-  ipcMain.handle('terminal', (_event, action: unknown, arg: unknown, userScope: unknown) => {
+  ipcMain.handle('terminal', async (_event, action: unknown, arg: unknown, userScope: unknown) => {
     if (!TERMINAL_ACTIONS.includes(action as TerminalActionId)) return { ok: false, message: 'Unknown action' }
+    /* The version to install comes from main's own check, never from the
+       renderer. */
+    if (action === 'self-update') {
+      const info = await updater.check(false)
+      if (!info.installable) return { ok: false, message: 'Running from source: update with git pull and pnpm build' }
+      if (!info.available || !info.latest) return { ok: false, message: 'OmaMole is up to date' }
+      return launchTerminal('self-update', info.latest)
+    }
     return launchTerminal(action as TerminalActionId, typeof arg === 'string' ? arg : undefined, userScope === true)
   })
 
@@ -189,6 +216,12 @@ function registerIpc() {
       defaultPath: typeof start === 'string' ? expandHome(start) : os.homedir()
     })
     return result.canceled ? null : result.filePaths[0] ?? null
+  })
+
+  ipcMain.handle('update', (_event, force: unknown) => updater.check(force === true))
+  ipcMain.handle('restart', () => {
+    app.relaunch()
+    app.exit(0)
   })
 
   ipcMain.handle('settings:get', () => loadSettings())

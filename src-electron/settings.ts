@@ -15,7 +15,8 @@ export const defaultSettings = (home = os.homedir()): Settings => ({
      offline downgrade path. Same default here. */
   paccacheKeep: 2,
   diskRoot: '~',
-  excludePaths: []
+  excludePaths: [],
+  updateCheck: true
 })
 
 /* The settings file is user-editable, so every field is re-validated on load
@@ -41,7 +42,8 @@ export function sanitizeSettings(input: unknown, fallback = defaultSettings()): 
         : fallback.journalMaxSize,
     paccacheKeep: integer(raw.paccacheKeep, 0, 10, fallback.paccacheKeep),
     diskRoot: pathLike(raw.diskRoot, fallback.diskRoot),
-    excludePaths: stringList(raw.excludePaths, fallback.excludePaths).filter((entry) => pathLike(entry, '') !== '')
+    excludePaths: stringList(raw.excludePaths, fallback.excludePaths).filter((entry) => pathLike(entry, '') !== ''),
+    updateCheck: typeof raw.updateCheck === 'boolean' ? raw.updateCheck : fallback.updateCheck
   }
 }
 

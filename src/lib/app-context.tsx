@@ -23,6 +23,8 @@ export type AppApi = {
   toast: (message: string, detail?: string, tone?: ToastTone) => void
   confirm: (options: ConfirmOptions) => Promise<boolean>
   setStatus: (message: string) => void
+  /* Install the available OmaMole update, or restart into an installed one. */
+  runUpdate: () => Promise<void>
   registerKeys: (handler: { current: KeyHandler }) => () => void
   registerRefresh: (refresh: { current: () => void }) => () => void
 }

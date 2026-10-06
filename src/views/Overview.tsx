@@ -22,6 +22,10 @@ export function Overview({ scan }: Props) {
     if (!action) return
     if (action.kind === 'view') app.go(action.view)
     else if (action.kind === 'terminal') {
+      if (action.action === 'self-update') {
+        await app.runUpdate()
+        return
+      }
       const result = await app.bridge.terminal(action.action)
       app.toast(result.message, undefined, result.ok ? 'normal' : 'urgent')
     } else if (action.kind === 'clean') {

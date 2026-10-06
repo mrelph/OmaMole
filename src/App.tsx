@@ -76,6 +76,7 @@ export function App({ bridge: rawBridge }: { bridge: OmamoleBridge }) {
   const scan = useLoad((force) => bridge.scan(force), [])
   const packages = useLoad((force) => bridge.packages(force), [])
   const omarchy = useLoad((force) => bridge.omarchy(force), [])
+  const update = useLoad((force) => bridge.update(force), [])
 
   useEffect(() => {
     bridge.app().then(setInfo).catch(() => {})
@@ -94,12 +95,13 @@ export function App({ bridge: rawBridge }: { bridge: OmamoleBridge }) {
       scan.reload(true)
       packages.reload(true)
       omarchy.reload(true)
+      update.reload(false)
     })
     return () => {
       offTheme()
       offFocus()
     }
-  }, [bridge, scan.reload, packages.reload, omarchy.reload])
+  }, [bridge, scan.reload, packages.reload, omarchy.reload, update.reload])
 
   useEffect(() => {
     document.documentElement.style.setProperty('zoom', String(zoom))
@@ -142,6 +144,21 @@ export function App({ bridge: rawBridge }: { bridge: OmamoleBridge }) {
     }
   }, [])
 
+  /* U: restart into an installed update, or install the available one. */
+  const runUpdate = useCallback(async () => {
+    const info = update.data
+    if (info?.restartNeeded) {
+      await bridge.restart()
+      return
+    }
+    if (!info?.available) {
+      toast('OmaMole is up to date', info?.latest ? `Latest release is ${info.latest}.` : undefined)
+      return
+    }
+    const result = await bridge.terminal('self-update')
+    toast(result.ok ? `Installing OmaMole ${info.latest}` : result.message, result.ok ? 'Follow the terminal; restart OmaMole when it finishes.' : undefined, result.ok ? 'normal' : 'urgent')
+  }, [bridge, toast, update.data])
+
   const refreshCurrent = useCallback(() => {
     if (viewRefresh.current) viewRefresh.current.current()
     else if (view === 'overview') scan.reload(true)
@@ -158,9 +175,10 @@ export function App({ bridge: rawBridge }: { bridge: OmamoleBridge }) {
     toast,
     confirm,
     setStatus,
+    runUpdate,
     registerKeys,
     registerRefresh
-  }), [bridge, info, focus, dialog, help, go, toast, confirm, registerKeys, registerRefresh])
+  }), [bridge, info, focus, dialog, help, go, toast, confirm, runUpdate, registerKeys, registerRefresh])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -190,6 +208,11 @@ export function App({ bridge: rawBridge }: { bridge: OmamoleBridge }) {
       const digit = Number(event.key)
       if (Number.isInteger(digit) && digit >= 1 && digit <= VIEWS.length) {
         go(VIEWS[digit - 1].id)
+        event.preventDefault()
+        return
+      }
+      if (event.key === 'U') {
+        void runUpdate()
         event.preventDefault()
         return
       }
@@ -276,7 +299,10 @@ export function App({ bridge: rawBridge }: { bridge: OmamoleBridge }) {
       body = <Omarchy report={omarchy} onChanged={() => scan.reload(true)} />
       break
     case 'settings':
-      body = <SettingsView onSaved={setSettings} />
+      body = <SettingsView onSaved={(saved) => {
+        setSettings(saved)
+        update.reload(false)
+      }} update={update} />
       break
   }
 
@@ -292,6 +318,11 @@ export function App({ bridge: rawBridge }: { bridge: OmamoleBridge }) {
           <span className="spacer" />
           {loadingAny && <Spinner />}
           {scan.data && <span className="dim">scanned {ago(scan.data.generatedAt)}</span>}
+          {update.data?.restartNeeded ? (
+            <Button small variant="primary" glyph={G.refresh} kbd="U" onClick={runUpdate} title={`OmaMole ${update.data.installedVersion} is installed`}>Restart to update</Button>
+          ) : update.data?.available ? (
+            <Button small variant="primary" glyph={G.update} kbd="U" onClick={runUpdate} title={update.data.installable ? 'Build and install in a terminal' : 'Running from source: git pull'}>v{update.data.latest}</Button>
+          ) : null}
           <Button small glyph={G.refresh} kbd="r" onClick={refreshCurrent} title="Refresh this view">Refresh</Button>
           <Button small glyph={G.help} kbd="?" onClick={() => setHelp(true)} title="Keyboard shortcuts">Keys</Button>
         </header>
@@ -359,6 +390,7 @@ export function App({ bridge: rawBridge }: { bridge: OmamoleBridge }) {
               <kbd>space</kbd><span>select a row for a batch action</span>
               <kbd>h / esc</kbd><span>back to the view list (in Disk: up a folder)</span>
               <kbd>r</kbd><span>refresh, bypassing the cache</span>
+              <kbd>U</kbd><span>install an OmaMole update, or restart into one</span>
               <kbd>ctrl + / −</kbd><span>zoom · ctrl 0 resets</span>
               <kbd>super w</kbd><span>close (Hyprland)</span>
             </div>

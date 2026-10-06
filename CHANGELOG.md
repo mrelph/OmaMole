@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 — 2026-10-06
+
+- **Update notice.** Once a day OmaMole asks GitHub for the newest release
+  tag. A newer one shows as a toolbar button and an Overview recommendation;
+  `U` builds that release's PKGBUILD and installs it in Omarchy's floating
+  terminal, then `U` again restarts into it. Off switch and "check now" in
+  Settings. From a source checkout it only tells you to `git pull`.
+- **PKGBUILD builds from the git tag** instead of a tarball, so the PKGBUILD
+  committed at a tag is complete — no checksum step after tagging.
+- `pnpm start` always uses the system Electron, never the npm wrapper's
+  downloaded copy.
+
 ## 0.1.0 — 2026-10-05
 
 First release. Inspired by WSLMole v2.0.0, rebuilt as a Hyprland-native app for

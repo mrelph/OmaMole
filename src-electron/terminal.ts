@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { which } from './exec'
 import type { TerminalActionId } from './types'
+import { selfUpdateCommand } from './update'
 
 /* Interactive or long-running system work (updates, orphan review, merging
    .pacnew files) is handed to Omarchy's own floating terminal rather than
@@ -26,6 +27,8 @@ export function terminalCommand(action: TerminalActionId, arg?: string, userScop
       return 'omarchy debug --no-sudo --print | less -R'
     case 'btop':
       return 'btop'
+    case 'self-update':
+      return arg ? selfUpdateCommand(arg) : null
     case 'unit-status': {
       if (!arg || !UNIT_PATTERN.test(arg)) return null
       const scope = userScope ? ' --user' : ''

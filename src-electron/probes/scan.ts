@@ -1,4 +1,4 @@
-import type { CleanCategory, OmarchyReport, PackagesReport, Recommendation, ScanReport } from '../types'
+import type { CleanCategory, OmarchyReport, PackagesReport, Recommendation, ScanReport, UpdateInfo } from '../types'
 import { df, readMeminfo } from './common'
 
 const GiB = 1024 ** 3
@@ -10,6 +10,7 @@ export type ScanInputs = {
   clean: CleanCategory[] | null
   packages: PackagesReport | null
   omarchy: OmarchyReport | null
+  update?: UpdateInfo | null
 }
 
 export const gradeFor = (score: number): ScanReport['grade'] =>
@@ -154,6 +155,25 @@ export function scoreSystem(inputs: ScanInputs): Omit<ScanReport, 'generatedAt' 
     }
   } else {
     skipped.push('omarchy')
+  }
+
+  /* OmaMole's own update is news, not a health problem: no penalty. */
+  if (inputs.update?.restartNeeded) {
+    recommendations.push({
+      id: 'omamole-restart', title: `OmaMole ${inputs.update.installedVersion} is installed`,
+      detail: 'Restart OmaMole to start using it (U).',
+      risk: 'low', status: 'info', auto: false
+    })
+  } else if (inputs.update?.available) {
+    recommendations.push({
+      id: 'omamole-update', title: `OmaMole ${inputs.update.latest} is available`,
+      detail: inputs.update.installable
+        ? 'Builds the release PKGBUILD and installs it in a terminal (U).'
+        : 'Running from a source checkout: git pull and rebuild.',
+      risk: 'low', status: 'info',
+      action: inputs.update.installable ? { kind: 'terminal', action: 'self-update' } : undefined,
+      auto: false
+    })
   }
 
   score = Math.max(0, Math.min(100, score))

@@ -82,6 +82,7 @@ export type TerminalActionId =
   | 'btop'
   | 'debug'
   | 'unit-status'
+  | 'self-update'
 
 export type RecommendationAction =
   | { kind: 'clean'; ids: CleanCategoryId[] }
@@ -97,6 +98,21 @@ export type Recommendation = {
   action?: RecommendationAction
   /* Eligible for the one-key "fix low-risk" sweep. */
   auto: boolean
+}
+
+export type UpdateInfo = {
+  current: string
+  latest: string | null
+  /* A newer tag exists than what is running (or installed, pending restart). */
+  available: boolean
+  /* Running from the installed package, so the terminal update can replace it.
+     From a source checkout the answer is `git pull`, not makepkg. */
+  installable: boolean
+  /* A newer version is on disk than the one in memory. */
+  restartNeeded: boolean
+  installedVersion: string | null
+  checkedAt: number | null
+  error?: string
 }
 
 export type ScanReport = {
@@ -252,6 +268,7 @@ export type Settings = {
   paccacheKeep: number
   diskRoot: string
   excludePaths: string[]
+  updateCheck: boolean
 }
 
 export type AppInfo = {
@@ -287,4 +304,6 @@ export type OmamoleBridge = {
   pickFolder: (start?: string) => Promise<string | null>
   settings: () => Promise<Settings>
   saveSettings: (settings: Settings) => Promise<Settings>
+  update: (force?: boolean) => Promise<UpdateInfo>
+  restart: () => Promise<void>
 }

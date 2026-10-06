@@ -4,7 +4,7 @@
 # one major. $_electron is the single source of truth for both depends=() and
 # the installed launcher; bumping Electron means changing that one line.
 pkgname=omamole
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc="Scan, clean, and tune an Arch Linux / Omarchy system — a Hyprland-native housekeeping app"
 arch=('any')
@@ -19,13 +19,16 @@ optdepends=(
   'snapper: create a snapshot before cleaning'
   'btop: process viewer launched from the System view'
 )
-makedepends=('pnpm' 'nodejs')
-source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz")
-# After tagging a new version: bump pkgver, then run `updpkgsums`.
-sha256sums=('ac2725e5b497a04a25ded8388707b43a7ad7801f0fc2b8f60cbc99a9e42faded')
+makedepends=('pnpm' 'nodejs' 'git')
+# Built from the release tag itself rather than a tarball, so the PKGBUILD
+# committed at a tag is complete as-is: no checksum to fill in after tagging,
+# and OmaMole's in-app updater can build any release straight from its tag.
+# The git tag pins the exact tree; SKIP is the Arch convention for VCS sources.
+source=("${_repo}::git+${url}.git#tag=v${pkgver}")
+sha256sums=('SKIP')
 
 build() {
-  cd "${srcdir}/${_repo}-${pkgver}"
+  cd "${srcdir}/${_repo}"
   export HOME="${srcdir}"
   export npm_config_store_dir="${srcdir}/.pnpm-store"
   # The electron devDependency exists only for its types; skip its binary.
@@ -35,12 +38,12 @@ build() {
 }
 
 check() {
-  cd "${srcdir}/${_repo}-${pkgver}"
+  cd "${srcdir}/${_repo}"
   pnpm test
 }
 
 package() {
-  cd "${srcdir}/${_repo}-${pkgver}"
+  cd "${srcdir}/${_repo}"
 
   local app="${pkgdir}/usr/lib/${pkgname}"
   install -d "${app}"

@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import type { Settings } from '../../src-electron/types'
+import type { Settings, UpdateInfo } from '../../src-electron/types'
 import { List, type RowDef } from '../components/List'
 import { ErrorRow, Glyph, Skeleton } from '../components/ui'
 import { useApp, useKeys } from '../lib/app-context'
-import { tildify } from '../lib/format'
+import { ago, tildify } from '../lib/format'
 import { G } from '../lib/glyphs'
-import { useLoad } from '../lib/use-load'
+import { useLoad, type Loaded } from '../lib/use-load'
 
 const JOURNAL_SIZES = ['100M', '200M', '500M', '1G', '2G']
 const DEV_AGES = [0, 30, 90, 180, 365]
@@ -17,7 +17,7 @@ const cycle = <T,>(values: T[], current: T, step: number): T => {
 
 /* Every setting is a row: Enter / l steps forward, h steps back, x removes a
    list entry. Saved on each change, validated again by the main process. */
-export function SettingsView({ onSaved }: { onSaved: (settings: Settings) => void }) {
+export function SettingsView({ onSaved, update }: { onSaved: (settings: Settings) => void; update: Loaded<UpdateInfo> }) {
   const app = useApp()
   const loaded = useLoad(() => app.bridge.settings(), [])
   const [cursor, setCursor] = useState(0)
@@ -44,6 +44,16 @@ export function SettingsView({ onSaved }: { onSaved: (settings: Settings) => voi
   type Item = { key: string; section: string; label: string; value: string; step?: (direction: number) => void; enter?: () => void; remove?: () => void }
   const items: Item[] = settings
     ? [
+        {
+          key: 'update-check', section: 'Updates', label: 'Check GitHub for new releases daily',
+          value: settings.updateCheck ? 'on' : 'off',
+          step: () => void save({ ...settings, updateCheck: !settings.updateCheck })
+        },
+        {
+          key: 'update-now', section: 'Updates', label: 'Check now',
+          value: update.loading ? 'checking…' : update.data?.error ? update.data.error : update.data?.latest ? `latest ${update.data.latest}` : '',
+          enter: () => update.reload(true)
+        },
         {
           key: 'paccache', section: 'Cleanup', label: 'Package versions to keep',
           value: `${settings.paccacheKeep} (paccache -k)`,
@@ -132,6 +142,10 @@ export function SettingsView({ onSaved }: { onSaved: (settings: Settings) => voi
         <dl className="kv">
           <dt>Version</dt>
           <dd>{app.info?.version}</dd>
+          <dt>Latest</dt>
+          <dd>{update.data?.latest ?? '—'}{update.data?.checkedAt ? ` · ${ago(update.data.checkedAt)}` : ''}</dd>
+          <dt>Install</dt>
+          <dd>{update.data?.installable ? 'package (/usr/lib/omamole)' : 'source checkout'}</dd>
           <dt>Electron</dt>
           <dd>{app.info?.electron}</dd>
           <dt>Omarchy</dt>
