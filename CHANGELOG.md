@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0 — 2026-10-06
+
+First stable release. No functional changes from 0.2.0: the version marks
+OmaMole as feature-complete for daily use — cleanup, disk and developer
+artifact analysis, package and system health, the Omarchy/Hyprland view, and
+in-app updates from release tags.
+
 ## 0.2.0 — 2026-10-06
 
 - **Update notice.** Once a day OmaMole asks GitHub for the newest release

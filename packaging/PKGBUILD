@@ -4,7 +4,7 @@
 # one major. $_electron is the single source of truth for both depends=() and
 # the installed launcher; bumping Electron means changing that one line.
 pkgname=omamole
-pkgver=0.2.0
+pkgver=1.0.0
 pkgrel=1
 pkgdesc="Scan, clean, and tune an Arch Linux / Omarchy system — a Hyprland-native housekeeping app"
 arch=('any')
