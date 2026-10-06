@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- Gives the polkit prompt a readable reason instead of "run a program as
+     root", scoped to the installed helper path only. auth_admin_keep lets a
+     second clean within a few minutes reuse the authorization. -->
+<policyconfig>
+  <vendor>OmaMole</vendor>
+  <vendor_url>https://github.com/mrelph/OmaMole</vendor_url>
+  <action id="org.omamole.helper">
+    <description>Clean system caches</description>
+    <message>OmaMole needs to clean the pacman cache, journal, or crash dumps</message>
+    <icon_name>omamole</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/omamole/helper/omamole-helper</annotate>
+  </action>
+</policyconfig>

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+dist-electron/
+*.log
+packaging/*.pkg.tar.*
+packaging/src/
+packaging/pkg/

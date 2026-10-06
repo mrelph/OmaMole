@@ -1,0 +1,70 @@
+# Maintainer: Mark Relph
+#
+# Follows the Inkwell model: the app runs on the *system* Electron, pinned to
+# one major. $_electron is the single source of truth for both depends=() and
+# the installed launcher; bumping Electron means changing that one line.
+pkgname=omamole
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Scan, clean, and tune an Arch Linux / Omarchy system — a Hyprland-native housekeeping app"
+arch=('any')
+_repo=OmaMole
+url="https://github.com/mrelph/${_repo}"
+license=('MIT')
+_electron=electron43
+depends=("${_electron}" 'pacman-contrib' 'polkit' 'hicolor-icon-theme')
+optdepends=(
+  'yay: AUR update checks and build-cache cleanup'
+  'paru: AUR update checks and build-cache cleanup'
+  'snapper: create a snapshot before cleaning'
+  'btop: process viewer launched from the System view'
+)
+makedepends=('pnpm' 'nodejs')
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz")
+# Replace with the real checksum once v${pkgver} is tagged:
+#   updpkgsums  (or: makepkg -g >> PKGBUILD)
+sha256sums=('SKIP')
+
+build() {
+  cd "${srcdir}/${_repo}-${pkgver}"
+  export HOME="${srcdir}"
+  export npm_config_store_dir="${srcdir}/.pnpm-store"
+  # The electron devDependency exists only for its types; skip its binary.
+  export ELECTRON_SKIP_BINARY_DOWNLOAD=1
+  pnpm install --frozen-lockfile
+  pnpm build
+}
+
+check() {
+  cd "${srcdir}/${_repo}-${pkgver}"
+  pnpm test
+}
+
+package() {
+  cd "${srcdir}/${_repo}-${pkgver}"
+
+  local app="${pkgdir}/usr/lib/${pkgname}"
+  install -d "${app}"
+  cp -r dist dist-electron "${app}/"
+  install -Dm644 package.json "${app}/package.json"
+  find "${app}/dist" "${app}/dist-electron" -type d -exec chmod 755 {} \;
+  find "${app}/dist" "${app}/dist-electron" -type f -exec chmod 644 {} \;
+
+  # The root helper: root-owned and not writable by anyone else, because
+  # polkit will run it as root.
+  install -Dm755 helper/omamole-helper "${app}/helper/omamole-helper"
+  install -Dm644 packaging/org.omamole.helper.policy "${pkgdir}/usr/share/polkit-1/actions/org.omamole.helper.policy"
+
+  install -d "${pkgdir}/usr/bin"
+  cat > "${pkgdir}/usr/bin/${pkgname}" <<'LAUNCHER'
+#!/bin/bash
+exec @ELECTRON@ /usr/lib/omamole "$@"
+LAUNCHER
+  sed -i "s|@ELECTRON@|${_electron}|" "${pkgdir}/usr/bin/${pkgname}"
+  chmod 755 "${pkgdir}/usr/bin/${pkgname}"
+
+  install -Dm644 packaging/omamole.desktop "${pkgdir}/usr/share/applications/${pkgname}.desktop"
+  install -Dm644 build/icon.png "${pkgdir}/usr/share/icons/hicolor/512x512/apps/${pkgname}.png"
+  install -Dm644 build/icon.svg "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${pkgname}.svg"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

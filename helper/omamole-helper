@@ -1,0 +1,89 @@
+#!/bin/bash
+# omamole-helper — the only code OmaMole runs as root.
+#
+# Invoked through pkexec, so Omarchy's polkit agent asks for the password
+# once per batch. It accepts a fixed vocabulary of actions with strictly
+# validated arguments and never takes a path from the caller: every location
+# it touches is hard-coded below.
+#
+#   omamole-helper <action> [arg] [<action> [arg]] ...
+#
+#   paccache-keep <N>          keep N most recent versions of each package (paccache -rk N)
+#   paccache-uninstalled       drop every cached version of uninstalled packages (paccache -ruk0)
+#   journal-vacuum <SIZE>      shrink the systemd journal to SIZE (e.g. 200M)
+#   coredumps                  delete stored systemd-coredump files
+#
+# Each action prints one line: "RESULT <action> ok|fail <message>".
+
+set -uo pipefail
+export LC_ALL=C PATH=/usr/local/sbin:/usr/local/bin:/usr/bin
+
+if [[ $EUID -ne 0 ]]; then
+  echo "omamole-helper: must run as root (via pkexec)" >&2
+  exit 1
+fi
+
+COREDUMP_DIR=/var/lib/systemd/coredump
+
+result() {
+  printf 'RESULT %s %s %s\n' "$1" "$2" "${3//$'\n'/ }"
+}
+
+last_line() {
+  grep -v '^\s*$' | tail -n 1
+}
+
+while (($#)); do
+  action=$1
+  shift
+  case $action in
+    paccache-keep)
+      keep=${1:-}
+      shift || true
+      if [[ ! $keep =~ ^[0-9]$|^10$ ]]; then
+        result "$action" fail "invalid keep count"
+        continue
+      fi
+      if out=$(paccache -r -k "$keep" 2>&1); then
+        result "$action" ok "$(last_line <<<"$out")"
+      else
+        result "$action" fail "$(last_line <<<"$out")"
+      fi
+      ;;
+    paccache-uninstalled)
+      if out=$(paccache -r -u -k 0 2>&1); then
+        result "$action" ok "$(last_line <<<"$out")"
+      else
+        result "$action" fail "$(last_line <<<"$out")"
+      fi
+      ;;
+    journal-vacuum)
+      size=${1:-}
+      shift || true
+      if [[ ! $size =~ ^[1-9][0-9]{0,5}[KMG]$ ]]; then
+        result "$action" fail "invalid size"
+        continue
+      fi
+      if out=$(journalctl --vacuum-size="$size" 2>&1); then
+        result "$action" ok "$(last_line <<<"$out")"
+      else
+        result "$action" fail "$(last_line <<<"$out")"
+      fi
+      ;;
+    coredumps)
+      if [[ ! -d $COREDUMP_DIR ]]; then
+        result "$action" ok "no coredump directory"
+        continue
+      fi
+      count=$(find "$COREDUMP_DIR" -maxdepth 1 -type f -name 'core.*' | wc -l)
+      if find "$COREDUMP_DIR" -maxdepth 1 -type f -name 'core.*' -delete; then
+        result "$action" ok "removed $count coredump(s)"
+      else
+        result "$action" fail "could not remove coredumps"
+      fi
+      ;;
+    *)
+      result "$action" fail "unknown action"
+      ;;
+  esac
+done

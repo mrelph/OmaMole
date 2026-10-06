@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=OmaMole
+GenericName=System Cleaner
+Comment=Scan, clean, and tune an Arch Linux / Omarchy system
+Exec=omamole
+Icon=omamole
+Terminal=false
+Categories=System;Utility;
+StartupWMClass=omamole
+Keywords=clean;cache;disk;pacman;aur;journal;omarchy;hyprland;

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#11141c"/>
+  <!-- ground line -->
+  <rect x="64" y="368" width="384" height="12" fill="#3a4152"/>
+  <!-- molehill -->
+  <path d="M120 368 C150 270 210 236 256 236 C302 236 362 270 392 368 Z" fill="#7aa2f7"/>
+  <!-- mole peeking: head -->
+  <path d="M206 300 C206 262 230 244 256 244 C282 244 306 262 306 300 L306 316 L206 316 Z" fill="#c0caf5"/>
+  <circle cx="236" cy="286" r="8" fill="#11141c"/>
+  <circle cx="276" cy="286" r="8" fill="#11141c"/>
+  <ellipse cx="256" cy="304" rx="14" ry="9" fill="#f7768e"/>
+  <!-- shovel, planted in the ground beside the hill -->
+  <g transform="rotate(14 412 300)">
+    <rect x="405" y="104" width="14" height="150" fill="#c0caf5"/>
+    <rect x="390" y="96" width="44" height="14" fill="#c0caf5"/>
+    <path d="M388 250 L436 250 L436 318 C436 340 388 340 388 318 Z" fill="#c0caf5"/>
+  </g>
+</svg>
